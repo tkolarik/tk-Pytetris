@@ -12,7 +12,7 @@ WINDOW_HEIGHT = 24*SCALE
 FPS = 60
 GRID_SIZE = 1*SCALE
 MOVE_DOWN_EVENT = pygame.USEREVENT + 1
-MOVE_DOWN_INTERVAL = 75  # In milliseconds
+MOVE_DOWN_INTERVAL = 150  # In milliseconds
 pygame.font.init() 
 game_over_font = pygame.font.Font(None, 36)
 
@@ -32,9 +32,9 @@ class Tetromino:
           '..OO.',
           '..O..',
           '.....'],
-         ['.....',
-          '..O..',
+         ['..O..',
           '.OOO.',
+          '.....',
           '.....',
           ],
          ['..O..',
@@ -46,9 +46,9 @@ class Tetromino:
            '.OOO.',
            '.O...',
            '.....'],
-           ['..OO.',
-            '...O.',
-            '...O.',
+           ['.OO..',
+            '..O..',
+            '..O..',
             '.....'],
             ['.....',
             '...O.',
@@ -62,9 +62,9 @@ class Tetromino:
            '.O...',
            '.OOO.',
            '.....'],
-           ['..OO.',
-            '..O..',
-            '..O..',
+           ['.OO..',
+            '.O...',
+            '.O...',
             '.....'],
             ['.....',
             '.OOO.',
@@ -78,17 +78,17 @@ class Tetromino:
            '.OO..',
            '..OO.',
            '.....'],
-           ['...O.',
-            '..OO.',
-            '..O..',
+           ['..O..',
+            '.OO..',
+            '.O...',
             '.....'],
             ['.....',
-           '.OO..',
-           '..OO.',
-           '.....'],
-           ['...O.',
-            '..OO.',
-            '..O..',
+             '.OO..',
+             '..OO.',
+             '.....'],
+           ['..O..',
+            '.OO..',
+            '.O...',
             '.....']],
         [['.....',
            '..OO.',
@@ -154,8 +154,35 @@ class Tetromino:
         self.type = random.randint(0, 6)
         self.rotation = 0
 
-    def rotate(self):
+    def rotate(self, grid):
+        old_rotation = self.rotation
         self.rotation = (self.rotation + 1) % len(self.get_shape())
+
+        if self.type == 0:  # T shape
+            kick_data = [(0, 0), (-1, 0), (-1, 1), (0, -2), (-1, -2)]
+        elif self.type == 1 or self.type == 2:  # L and J shapes
+            if self.rotation % 2 == 1:  # Clockwise
+                kick_data = [(0, 0), (1, 0), (1, -1), (0, 2), (1, 2)]
+            else:  # Counterclockwise
+                kick_data = [(0, 0), (-1, 0), (-1, 1), (0, -2), (-1, -2)]
+        elif self.type == 3 or self.type == 4:  # S and Z shapes
+            kick_data = [(0, 0), (1, 0), (1, 1), (0, -2), (1, -2)]
+        elif self.type == 5:  # I shape
+            if self.rotation % 2 == 1:  # Clockwise
+                kick_data = [(0, 0), (-1, 0), (1, 0), (-2, -1), (2, 2)]
+            else:  # Counterclockwise
+                kick_data = [(0, 0), (-1, 0), (2, 0), (-1, -1), (2, 2)]
+        else:  # O shape, no rotation needed
+            self.rotation = old_rotation
+            return
+
+        for dx, dy in kick_data:
+            if self.move(grid, dx * GRID_SIZE, dy * GRID_SIZE):
+                break
+        else:
+            self.rotation = old_rotation
+
+
 
     def move(self, grid, dx, dy):
         self.x += dx
@@ -175,7 +202,12 @@ class Tetromino:
         for y, row in enumerate(self.get_shape()):
             for x, cell in enumerate(row):
                 if cell == 'O' and grid.in_bounds((self.x // GRID_SIZE) + x, (self.y // GRID_SIZE) + y):
-                    pygame.draw.rect(surface, self.COLORS[self.type], (self.x + x * GRID_SIZE, self.y + y * GRID_SIZE, GRID_SIZE, GRID_SIZE), 1)
+                    color = self.COLORS[self.type]
+                    pygame.draw.rect(surface, color, (self.x + x * GRID_SIZE + 1, self.y + y * GRID_SIZE + 1, GRID_SIZE - 2, GRID_SIZE - 2), width=0)
+                    border_color = tuple(max(c - 50, 0) for c in color)
+                    pygame.draw.rect(surface, border_color, (self.x + x * GRID_SIZE, self.y + y * GRID_SIZE, GRID_SIZE, GRID_SIZE), 2)
+
+
 
     def collides_with_grid(self, grid):
         for y, row in enumerate(self.get_shape()):
@@ -221,7 +253,10 @@ class Grid:
         for y, row in enumerate(self.grid):
             for x, cell in enumerate(row):
                 if cell[0] == 'O':
-                    pygame.draw.rect(surface, cell[1], (x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE, GRID_SIZE), 1)
+                    color = cell[1]
+                    pygame.draw.rect(surface, color, (x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE, GRID_SIZE),width=0)
+                    border_color = tuple(max(c - 50, 0) for c in color)
+                    pygame.draw.rect(surface, border_color, (x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE, GRID_SIZE), 2)
 
     def game_over(self):
         for row in range(2):
@@ -262,7 +297,7 @@ def main():
                 elif event.key == pygame.K_RIGHT:
                     tetromino.move(grid, GRID_SIZE, 0)
                 elif event.key == pygame.K_UP:
-                    tetromino.rotate()
+                    tetromino.rotate(grid)
                 elif event.key == pygame.K_DOWN:
                     tetromino.move(grid, 0, GRID_SIZE)
 
