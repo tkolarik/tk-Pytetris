@@ -3,6 +3,7 @@
 This repository contains a Tetris game implemented in Python, using the Pygame library.
 
 ## How to run the game
+1. Install the required dependencies by running `pip install -r requirements.txt`.
 2. Run `python pytetris.py` to start the game.
 
 ## Controls
